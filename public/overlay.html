@@ -1,0 +1,642 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, initial-scale=1.0" />
+    <title>Volleyball Overlay</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700;800;900&family=Barlow:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+
+    <style>
+      /* ── Overlay canvas ──────────────────────────────────── */
+      html,
+      body {
+        background: transparent !important;
+        overflow: hidden;
+        width: 1920px;
+        height: 1080px;
+        margin: 0;
+        padding: 0;
+      }
+
+      .overlay-root {
+        width: 1920px;
+        height: 1080px;
+        position: relative;
+        font-family: "Barlow Condensed", sans-serif;
+      }
+
+      /* ══════════════════════════════════════════════════════
+       TOURNAMENT BANNER — top bar with solid background
+       ══════════════════════════════════════════════════════ */
+      /* ══════════════════════════════════════════════════════
+   TOURNAMENT BANNER — PERFECTLY CENTERED NAVBAR
+   ══════════════════════════════════════════════════════ */
+      .tournament-banner {
+        position: absolute;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 1760px; /* 1920 - 160px (80px each side) */
+        height: 84px;
+
+        /* Solid dark band with subtle left accent stripe */
+        background: linear-gradient(
+          90deg,
+          #0a0f1e 0%,
+          #111827 12%,
+          #0d1525 88%,
+          #0a0f1e 100%
+        );
+        border-bottom: 2px solid rgba(255, 210, 0, 0.55);
+        border-radius: 0 0 12px 12px;
+
+        /* Perfect flex centering */
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 12px 60px;
+        gap: 4px;
+        box-sizing: border-box;
+
+        /* Left gold accent bar */
+        box-shadow:
+          inset 6px 0 0 #ffd200,
+          0 6px 32px rgba(0, 0, 0, 0.7);
+      }
+
+      /* Extend background to screen edges */
+      .tournament-banner::before {
+        content: "";
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 84px;
+        background: linear-gradient(
+          90deg,
+          #0a0f1e 0%,
+          #111827 12%,
+          #0d1525 88%,
+          #0a0f1e 100%
+        );
+        z-index: -1;
+      }
+
+      .tournament-name {
+        font-size: 32px;
+        font-weight: 900;
+        color: #ffffff;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        line-height: 1;
+        text-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+        margin: 0;
+        text-align: center;
+        max-width: 100%;
+      }
+
+      .tournament-subtitle-track {
+        width: 100%;
+        overflow: hidden;
+        white-space: nowrap;
+        height: 22px;
+        margin: 0;
+      }
+
+      .tournament-subtitle {
+        display: inline-block;
+        animation: marquee 30s linear infinite;
+        font-size: 16px;
+        font-weight: 500;
+        color: #ffd200;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        white-space: nowrap;
+      }
+
+      /* Pause on hover for readability */
+      .tournament-subtitle-track:hover .tournament-subtitle {
+        animation-play-state: paused;
+      }
+
+      @keyframes marqueePro {
+        0% {
+          transform: translateX(0);
+        }
+        45% {
+          transform: translateX(-45%);
+        } /* First word exits */
+        46% {
+          transform: translateX(0);
+        } /* Instant reset */
+        100% {
+          transform: translateX(0);
+        }
+      }
+
+      .tournament-subtitle {
+        /* ... other styles ... */
+        animation: marqueePro  linear infinite;
+      }
+
+      /* ══════════════════════════════════════════════════════
+       SCOREBOARD — compact, positioned at bottom
+       ══════════════════════════════════════════════════════ */
+      .scoreboard {
+        position: absolute;
+        bottom: 28px;
+        left: 50%;
+        transform: translateX(-50%);
+
+        display: flex;
+        align-items: stretch;
+        gap: 0;
+
+        /* Slightly smaller than before */
+        height: 90px;
+        min-width: 820px;
+
+        background: rgba(8, 12, 28, 0.88);
+        border: 1.5px solid rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        box-shadow:
+          0 8px 40px rgba(0, 0, 0, 0.7),
+          0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+        overflow: hidden;
+      }
+
+      /* ── Team Panels ──────────────────────────────────────── */
+      .team-panel {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 0 22px;
+        position: relative;
+        transition: background 0.4s ease;
+        flex: 1;
+      }
+
+      .team-panel.serving {
+        background: rgba(255, 210, 0, 0.04);
+      }
+
+      /* Team A — left side */
+      .team-a {
+        flex-direction: row;
+      }
+      /* Team B — right side */
+      .team-b {
+        flex-direction: row-reverse;
+      }
+
+      /* Serve dot */
+      .serve-dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: #ffd200;
+        box-shadow:
+          0 0 10px #ffd200,
+          0 0 22px rgba(255, 210, 0, 0.5);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        flex-shrink: 0;
+      }
+      .serve-dot.visible {
+        opacity: 1;
+      }
+
+      /* Logo */
+      .team-logo {
+        width: 50px;
+        height: 50px;
+        object-fit: contain;
+        border-radius: 6px;
+      }
+      .team-logo-placeholder {
+        font-size: 32px;
+        line-height: 1;
+        opacity: 0.45;
+      }
+
+      /* Team name + sets row */
+      .team-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .team-name {
+        font-size: 28px;
+        font-weight: 800;
+        color: #ffffff;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        line-height: 1;
+        white-space: nowrap;
+      }
+      .team-sets {
+        font-size: 12px;
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.45);
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+      }
+      .set-pips {
+        display: flex;
+        gap: 4px;
+      }
+      .pip {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        border: 1.5px solid rgba(255, 255, 255, 0.3);
+        background: transparent;
+        transition: all 0.3s ease;
+      }
+      .pip.won {
+        background: #ffd200;
+        border-color: #ffd200;
+        box-shadow: 0 0 6px rgba(255, 210, 0, 0.6);
+      }
+
+      /* Score number */
+      .score-number {
+        font-size: 64px;
+        font-weight: 900;
+        color: #ffffff;
+        line-height: 1;
+        letter-spacing: -0.02em;
+        min-width: 60px;
+        text-align: center;
+        transition: transform 0.1s ease;
+      }
+      .score-bump {
+        animation: scorePop 0.3s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+      }
+      @keyframes scorePop {
+        0% {
+          transform: scale(1);
+        }
+        40% {
+          transform: scale(1.22);
+          color: #ffd200;
+        }
+        100% {
+          transform: scale(1);
+        }
+      }
+
+      /* ── Center Divider ───────────────────────────────────── */
+      .score-divider {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 0 20px;
+        gap: 0;
+
+        border-left: 1px solid rgba(255, 255, 255, 0.08);
+        border-right: 1px solid rgba(255, 255, 255, 0.08);
+        min-width: 72px;
+      }
+      .set-label {
+        font-size: 10px;
+        font-weight: 700;
+        color: rgba(255, 255, 255, 0.35);
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+      }
+      .set-number {
+        font-size: 30px;
+        font-weight: 900;
+        color: #ffd200;
+        line-height: 1;
+      }
+      .divider-dash {
+        font-size: 14px;
+        color: rgba(255, 255, 255, 0.2);
+        margin-top: 2px;
+      }
+
+      /* ══════════════════════════════════════════════════════
+       MATCH OVER OVERLAY — improved
+       ══════════════════════════════════════════════════════ */
+      .match-over-overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.72);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.8s ease;
+        backdrop-filter: blur(3px);
+      }
+      .match-over-overlay.visible {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .match-over-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        padding: 52px 90px 48px;
+
+        background: rgba(8, 12, 26, 0.96);
+        border: 1.5px solid rgba(255, 210, 0, 0.4);
+        border-top: 4px solid #ffd200;
+        border-radius: 14px;
+        box-shadow:
+          0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+          0 40px 100px rgba(0, 0, 0, 0.8),
+          0 0 80px rgba(255, 210, 0, 0.08);
+
+        animation: cardReveal 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+      }
+
+      @keyframes cardReveal {
+        from {
+          transform: scale(0.88) translateY(20px);
+          opacity: 0;
+        }
+        to {
+          transform: scale(1) translateY(0);
+          opacity: 1;
+        }
+      }
+
+      .match-over-trophy {
+        font-size: 64px;
+        line-height: 1;
+        filter: drop-shadow(0 4px 24px rgba(255, 210, 0, 0.5));
+        animation: trophyFloat 3s ease-in-out infinite;
+      }
+
+      @keyframes trophyFloat {
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-6px);
+        }
+      }
+
+      .match-over-label {
+        font-size: 14px;
+        font-weight: 700;
+        color: #ffd200;
+        letter-spacing: 0.28em;
+        text-transform: uppercase;
+      }
+
+      .match-over-winner {
+        font-size: 80px;
+        font-weight: 900;
+        color: #ffffff;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        line-height: 1;
+        text-shadow: 0 4px 24px rgba(255, 255, 255, 0.15);
+      }
+
+      .match-over-sub {
+        font-size: 18px;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.5);
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+      }
+
+      /* Decorative side lines on the card */
+      .match-over-card::before,
+      .match-over-card::after {
+        content: "";
+        display: block;
+        height: 1px;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          rgba(255, 210, 0, 0.4),
+          transparent
+        );
+        width: 100%;
+        position: absolute;
+        left: 0;
+      }
+      .match-over-card::before {
+        top: 50px;
+      }
+      .match-over-card::after {
+        bottom: 50px;
+      }
+      .match-over-card {
+        position: relative;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="overlay-root">
+      <!-- ── Tournament Banner ──────────────────────────── -->
+      <div class="tournament-banner" id="tournamentBanner">
+        <div class="tournament-name" id="overlayTournamentName">
+          VOLLEYBALL CHAMPIONSHIP
+        </div>
+        <div class="tournament-subtitle-track">
+          <!-- Text is duplicated inside JS so marquee loops cleanly -->
+          <span class="tournament-subtitle" id="overlayTournamentSubtitle"
+            >Regional League · Season 2025</span
+          >
+        </div>
+      </div>
+
+      <!-- ── Scoreboard ─────────────────────────────────── -->
+      <div class="scoreboard">
+        <!-- Team A -->
+        <div class="team-panel team-a" id="panelA">
+          <div class="score-number" id="overlayScoreA">0</div>
+
+          <div class="team-info">
+            
+
+            <div class="team-sets">
+                 <div class="team-name" id="overlayTeamAName">TEAM ALPHA</div>
+              <span class="set-pips" id="pipsA"></span>
+                <span id="overlayTeamASetsText"></span>
+              
+             
+            </div>
+          </div>
+
+          <div id="logoContainerA">
+            <div class="team-logo-placeholder" id="logoPlaceholderA">🏐</div>
+          </div>
+          <span class="serve-dot" id="serveDotA"></span>
+        </div>
+
+        <!-- Center -->
+        <div class="score-divider">
+          <div class="set-label">SET</div>
+          <div class="set-number" id="overlayCurrentSet">1</div>
+          <div class="divider-dash">–</div>
+        </div>
+
+        <!-- Team B -->
+        <div class="team-panel team-b" id="panelB">
+          <div class="score-number" id="overlayScoreB">0</div>
+
+          <div class="team-info" style="text-align: right">
+            
+            <div class="team-sets" style="justify-content: flex-end">
+                
+              <span class="set-pips" id="pipsB"></span>
+             <span id="overlayTeamBSetsText"></span> 
+             <div class="team-name" id="overlayTeamBName">TEAM BETA</div>
+            </div>
+            
+            
+          </div>
+          
+          <div id="logoContainerB">
+            <div class="team-logo-placeholder" id="logoPlaceholderB">🏐</div>
+          </div>
+          <span class="serve-dot" id="serveDotB"></span>
+        </div>
+      </div>
+
+      <!-- ── Match Over Overlay ─────────────────────────── -->
+      <div class="match-over-overlay" id="matchOverOverlay">
+        <div class="match-over-card">
+          <!-- <div class="match-over-trophy"></div> -->
+          <div class="match-over-label">Match Winner</div>
+          <div class="match-over-winner" id="matchOverWinner">TEAM ALPHA</div>
+          <div class="match-over-sub" id="matchOverSub">Wins the Match</div>
+        </div>
+      </div>
+    </div>
+
+    <script src="client.js"></script>
+
+    <script>
+      let prevState = {};
+
+      function renderPips(team, setsWon, format) {
+        const maxSets = Math.ceil(format / 2);
+        const container = document.getElementById(`pips${team}`);
+        container.innerHTML = "";
+        for (let i = 0; i < maxSets; i++) {
+          const pip = document.createElement("span");
+          pip.className = "pip" + (i < setsWon ? " won" : "");
+          container.appendChild(pip);
+        }
+      }
+
+      function renderLogo(team, logoUrl) {
+        const container = document.getElementById(`logoContainer${team}`);
+        if (logoUrl && logoUrl.trim()) {
+          container.innerHTML = `<img class="team-logo" src="${logoUrl}" alt="Logo" onerror="this.style.display='none'" />`;
+        } else {
+          container.innerHTML = `<div class="team-logo-placeholder" id="logoPlaceholder${team}">🏐</div>`;
+        }
+      }
+
+      function bumpScore(id) {
+        const el = document.getElementById(id);
+        el.classList.remove("score-bump");
+        void el.offsetWidth;
+        el.classList.add("score-bump");
+      }
+
+      // Marquee: duplicate text so it loops seamlessly
+      function updateMarquee(text) {
+        const el = document.getElementById("overlayTournamentSubtitle");
+        // Separator between loops
+        el.textContent = text + "   ·   " + text;
+      }
+
+      function renderOverlay(state) {
+        document.getElementById("overlayTournamentName").textContent =
+          state.tournamentName;
+        updateMarquee(state.tournamentSubtitle);
+
+        document.getElementById("overlayTeamAName").textContent =
+          state.teamA.name;
+        document.getElementById("overlayTeamBName").textContent =
+          state.teamB.name;
+
+        if (state.teamA.logo !== prevState?.teamA?.logo)
+          renderLogo("A", state.teamA.logo);
+        if (state.teamB.logo !== prevState?.teamB?.logo)
+          renderLogo("B", state.teamB.logo);
+
+        if (state.teamA.score !== prevState?.teamA?.score) {
+          document.getElementById("overlayScoreA").textContent =
+            state.teamA.score;
+          bumpScore("overlayScoreA");
+        }
+        if (state.teamB.score !== prevState?.teamB?.score) {
+          document.getElementById("overlayScoreB").textContent =
+            state.teamB.score;
+          bumpScore("overlayScoreB");
+        }
+
+        document.getElementById("overlayTeamASetsText").textContent =
+          state.teamA.sets;
+        document.getElementById("overlayTeamBSetsText").textContent =
+          state.teamB.sets;
+        renderPips("A", state.teamA.sets, state.format);
+        renderPips("B", state.teamB.sets, state.format);
+
+        document.getElementById("overlayCurrentSet").textContent =
+          state.currentSet;
+
+        document
+          .getElementById("serveDotA")
+          .classList.toggle("visible", state.servingTeam === "A");
+        document
+          .getElementById("serveDotB")
+          .classList.toggle("visible", state.servingTeam === "B");
+        document
+          .getElementById("panelA")
+          .classList.toggle("serving", state.servingTeam === "A");
+        document
+          .getElementById("panelB")
+          .classList.toggle("serving", state.servingTeam === "B");
+
+        const matchOverlay = document.getElementById("matchOverOverlay");
+        if (state.matchOver) {
+          const winnerName =
+            state.teamA.sets > state.teamB.sets
+              ? state.teamA.name
+              : state.teamB.name;
+          const scoreStr = `${state.teamA.sets} – ${state.teamB.sets} in Sets`;
+          document.getElementById("matchOverWinner").textContent = winnerName;
+          document.getElementById("matchOverSub").textContent =
+            `Wins the Match · ${scoreStr}`;
+          matchOverlay.classList.add("visible");
+        } else {
+          matchOverlay.classList.remove("visible");
+        }
+
+        prevState = JSON.parse(JSON.stringify(state));
+      }
+
+      socket.addEventListener("message", (event) => {
+        const msg = JSON.parse(event.data);
+        if (msg.type === "state") renderOverlay(msg.data);
+      });
+    </script>
+  </body>
+</html>
